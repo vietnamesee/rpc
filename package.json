@@ -1,0 +1,11 @@
+{
+  "name": "long-is-me",
+  "version": "1.0.0",
+  "description": "Long Is Me - Discord Rich Presence Manager (Netlify)",
+  "dependencies": {
+    "discord.js-selfbot-v13": "^3.3.1"
+  },
+  "engines": {
+    "node": "18"
+  }
+}

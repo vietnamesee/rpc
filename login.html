@@ -1,0 +1,70 @@
+// netlify/functions/login.js
+// [Netlify Function — Node 18 — stateless]
+// POST /api/login — validate Discord token, return user info
+// No session persistence here; client stores token in localStorage
+
+const { Client } = require('discord.js-selfbot-v13');
+
+exports.handler = async (event) => {
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+  };
+
+  let body;
+  try {
+    body = JSON.parse(event.body);
+  } catch {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) };
+  }
+
+  const { token } = body;
+  if (!token) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Thiếu token' }) };
+  }
+
+  try {
+    const client = new Client({ checkUpdate: false });
+    const user = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        client.destroy();
+        reject(new Error('Timeout kết nối Discord'));
+      }, 10000);
+
+      client.once('ready', () => {
+        clearTimeout(timeout);
+        resolve({
+          id: client.user.id,
+          username: client.user.username,
+          discriminator: client.user.discriminator,
+          avatar: client.user.displayAvatarURL()
+        });
+      });
+      client.once('error', (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+      client.login(token).catch((err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+    });
+
+    client.destroy();
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ success: true, user })
+    };
+  } catch (err) {
+    return {
+      statusCode: 401,
+      headers,
+      body: JSON.stringify({ error: 'Token không hợp lệ: ' + err.message })
+    };
+  }
+};
